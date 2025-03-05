@@ -1,5 +1,4 @@
 import gradio as gr
-import pandas as pd
 
 def upload_file(file, preprocess):
     if not file:
@@ -10,23 +9,25 @@ def upload_file(file, preprocess):
 
     if preprocess:
         return [
-            gr.Textbox("Preprocessed terms:\n" + "".join(terms[:10]), label="Term preview (first 10 elements)"), 
-            gr.Button(interactive=False)
+            gr.Textbox("Preprocessed terms:\n" + "".join(terms[:5]), label="Term preview (first 5 elements)"), 
+            gr.Button(interactive=True)
         ]
     else:
         return [
-            gr.Textbox("Not preprocessed terms:\n" + "".join(terms[-10:]), label="Term preview (last 10 elements)"), 
+            gr.Textbox("Not preprocessed terms:\n" + "".join(terms[-5:]), label="Term preview (last 5 elements)"), 
             gr.Button(interactive=True)
         ]
 
 def clear_file():
     return [
         gr.Textbox("", label="Term preview"), 
-        gr.Button(interactive=False)
+        gr.Button(interactive=False),
+        gr.Textbox("", label="Score", visible=False)
     ]
 
 def run_eval(model, vocab):
-    return 0.5
+    print(f"Calculating {model}'s knowledge on your uploaded vocabulary.")
+    return gr.Textbox("0.5", label="Score", visible=True)
 
 def build_demo():
     with gr.Blocks() as demo:
@@ -36,7 +37,7 @@ def build_demo():
                 leaderboard = gr.DataFrame("leaderboard.csv")
 
             with gr.TabItem("Evaluate your data"):
-                gr.Markdown("Please submit a text file with a single term per line.")
+                gr.Markdown("Step 1. Submit a text file with a single term per line.")
                 
                 preprocess = gr.Checkbox(
                     label="Apply preprocessing", 
@@ -44,10 +45,11 @@ def build_demo():
                 )
 
                 with gr.Column():
-                    file = gr.File()
-                    vocab = gr.Textbox(label="Term preview")
+                    with gr.Row():
+                        file = gr.File(height=250)
+                        vocab = gr.Textbox(label="Term preview", lines=9, max_lines=9)
 
-                gr.Markdown("Select a model and click run to compute the score.")
+                gr.Markdown("Step 2. Select a model from the dropdown and click `Run` to compute the score.")
 
                 with gr.Column():
                     models = gr.Dropdown(
@@ -55,10 +57,10 @@ def build_demo():
                         label="Model"
                     )
                 run_btn = gr.Button(interactive=False)
-                score = gr.Textbox(label="Score")
+                score = gr.Textbox(label="Score", visible=False)
 
         file.upload(fn=upload_file, inputs=[file, preprocess], outputs=[vocab, run_btn])
-        file.clear(fn=clear_file, outputs=[vocab, run_btn])
+        file.clear(fn=clear_file, outputs=[vocab, run_btn, score])
         run_btn.click(fn=run_eval, inputs=[models, vocab], outputs=[score])
     return demo
 
